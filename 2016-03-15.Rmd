@@ -1,0 +1,240 @@
+---
+title: 'MIE237'
+author: "Neil Montgomery"
+date: "2016-03-15"
+output: 
+  ioslides_presentation: 
+    css: 'styles.css' 
+    widescreen: true 
+    transition: 0.001
+---
+\newcommand{\Var}[1]{\text{Var}\left( #1 \right)}
+\newcommand{\E}[1]{E\left( #1 \right)}
+\newcommand{\Sample}[1]{#1_1,\ldots,#1_n}
+\newcommand{\od}[2]{\overline #1_{#2\cdot}}
+\newcommand{\flist}[2]{\{#1_1, #1_2, \ldots, #1_#2\}}
+\newcommand{\samp}[2]{#1_1, #1_2, \ldots, #1_#2}
+\renewcommand{\bar}[1]{\overline{#1}}
+\newcommand{\ve}{\varepsilon}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+
+```{r, echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+library(dplyr)
+data(trees)
+```
+
+## Multiple regression so far { .build }
+
+* Completed:
+    + Model basics, single paramter inference, confidence and prediction intervals
+* Still to come:
+    + Higher order terms and dummy variables
+    + Model selection
+    + Assumptions and plots revisited
+    
+## Model selection is hard { .build }
+
+* Model selection is a computationally intensive process, but there is no reliable algorithm. (It turns out model selection is "unstable".)
+
+* Some plausible (and legitimate) criteria include:
+
+    + $R^2$ and variations, and other single number summaries
+    + Small p-values
+    + Good diagnostic plots
+    + Parsimony (smaller models might be better)
+    + Predictive accuracy (the main criteria in "machine learning")
+    
+## Higher order terms { .build }
+
+(Note 1: This is not a textbook topic in its own right but is discussed on pp. 447 and here and there in section 12.8)
+
+(Note 2: This topic is also being used to illustrate model selection challenges.)
+
+A "higher order term" in a regression model is just a product of other variables in the model. The polynomial model is an example of a model with higher order terms:
+$$y_i= \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \cdots + \beta_k x_i^k + \ve_i$$
+
+Polynomial models are mainly used to fit a nonlinear relationship between a $y$ and an $x$ variable. To illustrate the concept I will simulate data from this model:
+$$y = x^3 - 9x^2 + 28x - 24 + \ve, \quad \ve\sim N(0, 1)$$
+
+## Plot of the data
+
+```{r}
+library(dplyr)
+library(ggplot2)
+x <- 51:400/100
+y <- x^3 - 9*x^2 + 28*x - 24 + rnorm(length(x))
+poly_data <- data_frame(x=x, y=y)
+poly_data %>% 
+  ggplot(aes(x=x, y=y)) + geom_point()
+
+poly1 <- lm(y ~ x, poly_data)
+poly2 <- lm(y ~ x + I(x^2), poly_data)
+poly3 <- lm(y ~ x + I(x^2) + I(x^3), poly_data)
+poly4 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4), poly_data)
+poly5 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5), poly_data)
+```
+
+## Polynomial degree 1 fit 
+
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+library(broom)
+library(knitr)
+tidy(poly1)
+glance(poly1)[1]
+```
+
+<div class="columns-2">
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly_data %>% 
+  ggplot(aes(x=x, y=y)) + geom_point() +
+  geom_smooth(method="lm", formula = formula(poly1), se=FALSE, color="red")
+```
+
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly1 %>% 
+  ggplot(aes(x=.fitted, y=.resid)) + geom_point()
+```
+</div>
+
+## Polynomial degree 2 fit 
+
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+library(broom)
+tidy(poly2)
+glance(poly2)[1]
+```
+
+<div class="columns-2">
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly_data %>% 
+  ggplot(aes(x=x, y=y)) + geom_point() +
+  geom_smooth(method="lm", formula = formula(poly2), se=FALSE, color="red")
+```
+&nbsp;
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly2 %>% 
+  ggplot(aes(x=.fitted, y=.resid)) + geom_point()
+```
+</div>
+
+## Polynomial degree 3 fit 
+
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+library(broom)
+tidy(poly3)
+glance(poly3)[1]
+```
+
+<div class="columns-2">
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly_data %>% 
+  ggplot(aes(x=x, y=y)) + geom_point() +
+  geom_smooth(method="lm", formula = formula(poly3), se=FALSE, color="red")
+```
+&nbsp;
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly3 %>% 
+  ggplot(aes(x=.fitted, y=.resid)) + geom_point()
+```
+</div>
+
+## Polynomial degree 4 fit 
+
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+library(broom)
+tidy(poly4)
+glance(poly4)[1]
+```
+
+<div class="columns-2">
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly_data %>% 
+  ggplot(aes(x=x, y=y)) + geom_point() +
+  geom_smooth(method="lm", formula = formula(poly4), se=FALSE, color="red")
+```
+&nbsp;
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly4 %>% 
+  ggplot(aes(x=.fitted, y=.resid)) + geom_point()
+```
+</div>
+
+## Polynomial degree 5 fit 
+
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+library(broom)
+tidy(poly5)
+glance(poly5)[1]
+```
+
+<div class="columns-2">
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly_data %>% 
+  ggplot(aes(x=x, y=y)) + geom_point() +
+  geom_smooth(method="lm", formula = formula(poly5), se=FALSE, color="red")
+```
+&nbsp;
+```{r, fig.height=3, fig.width=3.5, fig.align='center'}
+poly5 %>% 
+  ggplot(aes(x=.fitted, y=.resid)) + geom_point()
+```
+</div>
+
+## "Overall" F tests for degrees 3 and 5 { .build }
+
+```{r}
+anova_table <- function(lmo) {
+  tidy(anova(lmo)) %>%
+    mutate(regr=df==1) %>% 
+    group_by(regr) %>% 
+    summarize(df=sum(df), sumsq=sum(sumsq)) %>% arrange(-regr) -> lmo_2
+  
+  lmo_2$ms <- lmo_2$sumsq/lmo_2$df
+  names(lmo_2)[1] <- "source"
+  lmo_2$source <- c("Regression", "Error")
+  lmo_2$F <- c(exp(-diff(log(lmo_2$ms))), NA)
+  lmo_2$"p-value" <- pf(lmo_2$F, lmo_2$df[1], lmo_2$df[2], lower.tail = FALSE)
+  return(lmo_2)
+}
+
+```
+
+Degree 3:
+
+```{r, results='asis'}
+library(xtable)
+print.xtable(xtable(anova_table(poly3),), "HTML", include.rownames=FALSE)
+```
+
+&nbsp;
+
+Degree 5:
+
+```{r, results='asis'}
+library(xtable)
+print.xtable(xtable(anova_table(poly5),), "HTML", include.rownames=FALSE)
+```
+
+## Polynomial example comments { .build }
+
+As expected, the 3rd degree polynomial model is the best model.
+
+Note that 4th and beyond are still perfectly good predictive models!
+(Despite some "individual" p-values being large...)
+
+Always remember the correct interpretation of these p-values.
+
+"Overall" F test can show strong evidence of a model even with "individual" p-values small.
+
+These apparent issues are caused (in this case) by powers of $x$ being highly correlated over the range of the data.
+
+## the sample correlation coeffients
+
+Here is a matrix of sample correlation coefficients among the first five powers of $x$ over its range $[`r range(x)[1]`, `r range(x)[2]`]$.
+
+```{r, results='asis', warning=FALSE}
+print.xtable(xtable(cor(cbind(x, x^2, x^3, x^4, x^5)), digits=5), "HTML",
+             include.rownames = FALSE, include.colnames = FALSE)
+```
+
